@@ -14,6 +14,12 @@
 #include "memlib.h"
 #include "config.h"
 
+#define WSIZE 4
+#define DSIZE 8
+#define CHUNKSIZE (1<<12)
+
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+
 /* private variables */
 static char *mem_start_brk;  /* points to first byte of heap */
 static char *mem_brk;        /* points to last byte of heap */
