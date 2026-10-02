@@ -18,6 +18,14 @@
 #include "mm.h"
 #include "memlib.h"
 
+
+#define WSIZE 4
+#define DSIZE 8
+#define CHUNKSIZE (1<<12)
+
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+
+
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
  * provide your team information in the following struct.
