@@ -19,13 +19,13 @@
 #include "memlib.h"
 
 
-#define WSIZE 4
-#define DSIZE 8
+#define WSIZE 4 // words size
+#define DSIZE 8 // Double Words size
 #define CHUNKSIZE (1<<12)
 
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 
-#define PAKC(size, alloc) ((size) | (alloc))
+#define PACK(size, alloc) ((size) | (alloc))
 
 #define GET(p) (*(unsigned int *)(p))
 #define PUT(p, val) (*(unsigned int *) (p) = (val))
@@ -118,6 +118,18 @@ void *mm_malloc(size_t size)
 
     place(bp, asize);
     return bp;
+}
+
+static void *find_fit(size_t asize){
+    void *bp;
+
+    for (bp = heap_listp; GET_SIZE(HDRP(bp))>0; bp = NEXT_BLKP(bp)){
+        if (!GET_ALLOC(HDRP(bp)) && asize <= GET_SIZE(HDRP(bp))){
+            return bp;
+        }
+    }
+
+    return NULL;
 }
 
 /*
