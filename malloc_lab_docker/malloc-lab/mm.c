@@ -132,6 +132,10 @@ static void *find_fit(size_t asize){
     return NULL;
 }
 
+static void place(void *bp, size_t asize){
+    
+}
+
 /*
  * mm_free - Freeing a block does nothing.
  */
