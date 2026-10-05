@@ -27,17 +27,17 @@
 
 #define PACK(size, alloc) ((size) | (alloc))
 
-#define GET(p) (*(unsigned int *)(p))
-#define PUT(p, val) (*(unsigned int *) (p) = (val))
+#define GET(p) (*(unsigned int *)(p)) // 4바이트 값 읽기
+#define PUT(p, val) (*(unsigned int *) (p) = (val)) // 4바이트 값 쓰기
 
-#define GET_SIZE(p) (GET(p) & ~0x7)
-#define GET_ALLOC(p) (GET(p) & 0x1)
+#define GET_SIZE(p) (GET(p) & ~0x7) // Header-Footer에서 size만 추출
+#define GET_ALLOC(p) (GET(p) & 0x1) // alloc 비트만 추출
 
-#define HDRP(bp) ((char *)(bp) - WSIZE)
-#define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+#define HDRP(bp) ((char *)(bp) - WSIZE) //payload->Header 주소
+#define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE) //payload -> Footer 주소
 
-#define NEXT_BLKP(bp) ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE)))
-#define PREV_BLKP(bp) ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE)))
+#define NEXT_BLKP(bp) ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) //현재 payload → 다음 payload
+#define PREV_BLKP(bp) ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //현재 payload → 이전 payload
 
 static char *heap_listp = 0;
 
@@ -133,6 +133,7 @@ static void *find_fit(size_t asize){
 }
 
 static void place(void *bp, size_t asize){
+    size_t current_size = GET_SIZE(HDRP(bp));
     
 }
 
