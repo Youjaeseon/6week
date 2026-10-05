@@ -39,6 +39,8 @@
 #define NEXT_BLKP(bp) ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE)))
 #define PREV_BLKP(bp) ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE)))
 
+static char *heap_listp = 0;
+
 
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
