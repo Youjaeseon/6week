@@ -263,34 +263,54 @@ static void *coalesce(void *bp)
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     size_t size = GET_SIZE(HDRP(bp));
 
-    if (prev_alloc && next_alloc) {            /* Case 1 */
-        return bp;
+    if (prev_alloc && next_alloc) {
+        /* 병합 없음 */
     }
 
-    else if (prev_alloc && !next_alloc) {      /* Case 2 */
-        size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
+    else if (prev_alloc && !next_alloc) {
+        void *next_bp = NEXT_BLKP(bp);
+
+        remove_free(next_bp);
+
+        size += GET_SIZE(HDRP(next_bp));
+
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
     }
 
-    else if (!prev_alloc && next_alloc) {      /* Case 3 */
-        size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+    else if (!prev_alloc && next_alloc) {
+        void *prev_bp = PREV_BLKP(bp);
+
+        remove_free(prev_bp);
+
+        size += GET_SIZE(HDRP(prev_bp));
+
+        PUT(HDRP(prev_bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
-        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
-        bp = PREV_BLKP(bp);
+
+        bp = prev_bp;
     }
 
-    else {                                     /* Case 4 */
-        size += GET_SIZE(HDRP(PREV_BLKP(bp))) +
-                GET_SIZE(FTRP(NEXT_BLKP(bp)));
-        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
-        PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
-        bp = PREV_BLKP(bp);
+    else {
+        void *prev_bp = PREV_BLKP(bp);
+        void *next_bp = NEXT_BLKP(bp);
+
+        remove_free(prev_bp);
+        remove_free(next_bp);
+
+        size += GET_SIZE(HDRP(prev_bp))
+              + GET_SIZE(HDRP(next_bp));
+
+        PUT(HDRP(prev_bp), PACK(size, 0));
+        PUT(FTRP(next_bp), PACK(size, 0));
+
+        bp = prev_bp;
     }
+
+    insert_free(bp);
 
     return bp;
 }
-
 static void insert_free(void *bp)
 {
     PREV_FREE(bp) = NULL;
