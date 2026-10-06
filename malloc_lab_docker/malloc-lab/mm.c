@@ -24,6 +24,7 @@
 #define CHUNKSIZE (1<<12)
 
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
+#define MIN_BLOCK_SIZE 24
 
 #define PACK(size, alloc) ((size) | (alloc))
 
@@ -84,6 +85,8 @@ team_t team = {
  */
 int mm_init(void)
 {
+    free_listp = NULL; 
+    
     if((heap_listp = mem_sbrk(4*WSIZE)) == (void *)-1)
         return -1;
     PUT(heap_listp,0);
@@ -113,12 +116,12 @@ void *mm_malloc(size_t size)
         return NULL;
 
     /* Adjust block size to include overhead and alignment reqs. */
-    if (size <= DSIZE)
-        asize = 2*DSIZE;
-    else
-        asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
+   asize = ALIGN(size + DSIZE);
 
-    /* Search the free list for a fit */
+    if (asize < MIN_BLOCK_SIZE)
+        asize = MIN_BLOCK_SIZE;
+    
+        /* Search the free list for a fit */
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
         return bp;
@@ -190,15 +193,19 @@ static void *find_fit(size_t asize)
 
 static void place(void *bp, size_t asize){
     size_t csize = GET_SIZE(HDRP(bp));
+
+    remove_free(bp);
     
-    if ((csize - asize) >= (2*DSIZE)){
+    if ((csize - asize) >= MIN_BLOCK_SIZE){
         PUT(HDRP(bp),PACK(asize,1));
         PUT(FTRP(bp),PACK(asize,1));
 
-        bp = NEXT_BLKP(bp);
+        void *next_bp = NEXT_BLKP(bp);
 
-        PUT(HDRP(bp),PACK(csize-asize,0));
-        PUT(FTRP(bp),PACK(csize-asize,0));
+        PUT(HDRP(next_bp), PACK(csize - asize, 0));
+        PUT(FTRP(next_bp), PACK(csize - asize, 0));
+        
+        insert_free(next_bp);
     }
     else{
         PUT(HDRP(bp),PACK(csize,1));
