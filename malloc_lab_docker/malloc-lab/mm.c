@@ -35,13 +35,19 @@
 
 #define HDRP(bp) ((char *)(bp) - WSIZE) //payload->Header 주소
 #define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE) //payload -> Footer 주소
+#define PREV_FREE(bp) (*(void **)(bp))
+#define NEXT_FREE(bp) (*(void **)((char *)(bp) + DSIZE))
 
 #define NEXT_BLKP(bp) ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) //현재 payload → 다음 payload
 #define PREV_BLKP(bp) ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //현재 payload → 이전 payload
 
 static char *heap_listp = 0;
-// static void *rover = 0;
+static void *free_listp = 0;
 
+//static void *rover = 0;
+
+static void insert_free(void *bp);
+static void remove_free(void *bp);
 static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
@@ -88,8 +94,6 @@ int mm_init(void)
 
     if(extend_heap(CHUNKSIZE/WSIZE) == NULL)
         return -1;
-
-    // rover = heap_listp;
 
     return 0;
 }
@@ -141,55 +145,49 @@ void *mm_malloc(size_t size)
 //     return NULL;
 // }
 
-// next fit
-// static void *find_fit(size_t asize){
-//     void *bp;
-
-//     for (bp = rover; GET_SIZE(HDRP(bp))>0; bp = NEXT_BLKP(bp)){
-//         if (!GET_ALLOC(HDRP(bp)) && asize <= GET_SIZE(HDRP(bp))){
-//             rover = bp;
-//             return bp;
-//         }
-//     }
- 
-//     for (bp = heap_listp; bp < rover; bp = NEXT_BLKP(bp)) {
-//         if (!GET_ALLOC(HDRP(bp)) &&
-//             asize <= GET_SIZE(HDRP(bp))) {
-
-//             rover = bp;
-//             return bp;
-//         }
-//     }
-
-//     return NULL;
-// }
-
 static void *find_fit(size_t asize)
 {
     void *bp;
-    void *best_bp = NULL;
-    size_t min_diff = (size_t)-1;
 
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+    for (bp = free_listp; bp != NULL; bp = NEXT_FREE(bp)) {
 
-        if (!GET_ALLOC(HDRP(bp)) &&
-            asize <= GET_SIZE(HDRP(bp))) {
-
-            size_t diff = GET_SIZE(HDRP(bp)) - asize;
-
-            if (diff < min_diff) {
-                min_diff = diff;
-                best_bp = bp;
-            }
-
-            // 딱 맞는 블록이면 더 좋은 후보가 존재할 수 없음
-            if (diff == 0)
-                break;
+        if (asize <= GET_SIZE(HDRP(bp))) {
+            return bp;
         }
     }
 
-    return best_bp;
+    return NULL;
 }
+
+
+// best fit
+// static void *find_fit(size_t asize)
+// {
+//     void *bp;
+//     void *best_bp = NULL;
+//     size_t min_diff = (size_t)-1;
+
+//     for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+
+//         if (!GET_ALLOC(HDRP(bp)) &&
+//             asize <= GET_SIZE(HDRP(bp))) {
+
+//             size_t diff = GET_SIZE(HDRP(bp)) - asize;
+
+//             if (diff < min_diff) {
+//                 min_diff = diff;
+//                 best_bp = bp;
+//             }
+
+//             // 딱 맞는 블록이면 더 좋은 후보가 존재할 수 없음
+//             if (diff == 0)
+//                 break;
+//         }
+//     }
+
+//     return best_bp;
+// }
+
 static void place(void *bp, size_t asize){
     size_t csize = GET_SIZE(HDRP(bp));
     
@@ -290,14 +288,21 @@ static void *coalesce(void *bp)
         bp = PREV_BLKP(bp);
     }
 
-     /* Next Fit rover 보정 */
-    // if (rover != NULL &&
-    //     rover > bp &&
-    //     rover < NEXT_BLKP(bp)) {
-    //     rover = bp;
-    // }
-
-
     return bp;
 }
 
+static void insert_free(void *bp)
+{
+    PREV_FREE(bp) = NULL;
+    NEXT_FREE(bp) = free_listp;
+
+    if (free_listp != NULL)
+        PREV_FREE(free_listp) = bp;
+
+    free_listp = bp;
+}
+
+static void remove_free(void *bp)
+{
+
+}
