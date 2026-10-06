@@ -40,11 +40,13 @@
 #define PREV_BLKP(bp) ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE))) //현재 payload → 이전 payload
 
 static char *heap_listp = 0;
+static void *rover = 0;
 
 static void *extend_heap(size_t words);
 static void *coalesce(void *bp);
 static void *find_fit(size_t asize);
 static void place(void *bp, size_t asize);
+
 
 
 /*********************************************************
@@ -87,6 +89,8 @@ int mm_init(void)
     if(extend_heap(CHUNKSIZE/WSIZE) == NULL)
         return -1;
 
+    rover = heap_listp;
+
     return 0;
 }
 
@@ -125,11 +129,34 @@ void *mm_malloc(size_t size)
     return bp;
 }
 
+// first fit
+
+// static void *find_fit(size_t asize){
+//     void *bp;
+//     for (bp = heap_listp; GET_SIZE(HDRP(bp))>0; bp = NEXT_BLKP(bp)){
+//         if (!GET_ALLOC(HDRP(bp)) && asize <= GET_SIZE(HDRP(bp))){
+//             return bp;
+//         }
+//     }
+//     return NULL;
+// }
+
+// next fit
 static void *find_fit(size_t asize){
     void *bp;
 
-    for (bp = heap_listp; GET_SIZE(HDRP(bp))>0; bp = NEXT_BLKP(bp)){
+    for (bp = rover; GET_SIZE(HDRP(bp))>0; bp = NEXT_BLKP(bp)){
         if (!GET_ALLOC(HDRP(bp)) && asize <= GET_SIZE(HDRP(bp))){
+            rover = bp;
+            return bp;
+        }
+    }
+ 
+    for (bp = heap_listp; bp < rover; bp = NEXT_BLKP(bp)) {
+        if (!GET_ALLOC(HDRP(bp)) &&
+            asize <= GET_SIZE(HDRP(bp))) {
+
+            rover = bp;
             return bp;
         }
     }
@@ -174,14 +201,18 @@ void *mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
     void *newptr;
-    size_t copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
+    size_t copySize;
 
     newptr = mm_malloc(size);
+
     if (newptr == NULL)
         return NULL;
+
     copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+
     if (size < copySize)
         copySize = size;
+        
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
