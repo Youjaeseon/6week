@@ -208,7 +208,7 @@ void *mm_realloc(void *ptr, size_t size)
     if (newptr == NULL)
         return NULL;
 
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+    copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
 
     if (size < copySize)
         copySize = size;
@@ -263,6 +263,14 @@ static void *coalesce(void *bp)
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
+
+     /* Next Fit rover 보정 */
+    if (rover != NULL &&
+        rover > bp &&
+        rover < NEXT_BLKP(bp)) {
+        rover = bp;
+    }
+
 
     return bp;
 }
