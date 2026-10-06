@@ -304,5 +304,14 @@ static void insert_free(void *bp)
 
 static void remove_free(void *bp)
 {
+    void *prev = PREV_FREE(bp);
+    void *next = NEXT_FREE(bp);
 
+    if (prev != NULL)
+        NEXT_FREE(prev) = next;
+    else
+        free_listp = next;
+
+    if (next != NULL)
+        PREV_FREE(next) = prev;
 }
