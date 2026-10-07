@@ -230,22 +230,60 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
+    if (ptr == NULL)
+        return mm_malloc(size);
 
-    newptr = mm_malloc(size);
+    if (size == 0) {
+        mm_free(ptr);
+        return NULL;
+    }
+
+    size_t old_size = GET_SIZE(HDRP(ptr));
+    size_t old_payload = old_size - DSIZE;
+
+    size_t new_asize = ALIGN(size + DSIZE);
+    if (new_asize < MIN_BLOCK_SIZE)
+        new_asize = MIN_BLOCK_SIZE;
+
+    /* 1. 현재 블록이 이미 충분하면 그대로 사용 */
+    if (new_asize <= old_size)
+        return ptr;
+
+    /* 2. 다음 블록이 free이고 합치면 충분하면 확장 */
+    void *next_bp = NEXT_BLKP(ptr);
+
+    if (!GET_ALLOC(HDRP(next_bp))) {
+
+        size_t next_size = GET_SIZE(HDRP(next_bp));
+
+        if (old_size + next_size >= new_asize) {
+
+            remove_free(next_bp);
+
+            size_t total = old_size + next_size;
+
+            PUT(HDRP(ptr), PACK(total, 1));
+            PUT(FTRP(ptr), PACK(total, 1));
+
+            return ptr;
+        }
+    }
+
+    /* 3. 안 되면 새로 할당 */
+    void *newptr = mm_malloc(size);
 
     if (newptr == NULL)
         return NULL;
 
-    copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
+    size_t copySize = old_payload;
 
     if (size < copySize)
         copySize = size;
-        
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
+
+    memcpy(newptr, ptr, copySize);
+
+    mm_free(ptr);
+
     return newptr;
 }
 
