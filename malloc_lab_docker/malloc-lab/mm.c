@@ -151,30 +151,15 @@ void *mm_malloc(size_t size)
 static void *find_fit(size_t asize)
 {
     void *bp;
-    void *best = NULL;
-    size_t best_diff = (size_t)-1;
-    int count = 0;
 
-    for (bp = free_listp;
-         bp != NULL && count < 20;
-         bp = NEXT_FREE(bp), count++) {
+    for (bp = free_listp; bp != NULL; bp = NEXT_FREE(bp)) {
 
-        size_t bsize = GET_SIZE(HDRP(bp));
-
-        if (bsize >= asize) {
-            size_t diff = bsize - asize;
-
-            if (diff < best_diff) {
-                best_diff = diff;
-                best = bp;
-
-                if (diff == 0)
-                    break;
-            }
+        if (asize <= GET_SIZE(HDRP(bp))) {
+            return bp;
         }
     }
 
-    return best;
+    return NULL;
 }
 
 
@@ -245,54 +230,22 @@ void mm_free(void *bp)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    if (ptr == NULL)
-        return mm_malloc(size);
+    void *oldptr = ptr;
+    void *newptr;
+    size_t copySize;
 
-    if (size == 0) {
-        mm_free(ptr);
-        return NULL;
-    }
-
-    size_t oldsize = GET_SIZE(HDRP(ptr));
-    size_t asize = ALIGN(size + DSIZE);
-
-    if (asize < MIN_BLOCK_SIZE)
-        asize = MIN_BLOCK_SIZE;
-
-    /* 기존 블록으로 충분 */
-    if (asize <= oldsize)
-        return ptr;
-
-    /* 다음 블록이 free인지 확인 */
-    void *next = NEXT_BLKP(ptr);
-
-    if (!GET_ALLOC(HDRP(next))) {
-        size_t total = oldsize + GET_SIZE(HDRP(next));
-
-        if (total >= asize) {
-            remove_free(next);
-
-            PUT(HDRP(ptr), PACK(total, 1));
-            PUT(FTRP(ptr), PACK(total, 1));
-
-            return ptr;
-        }
-    }
-
-    /* 안 되면 기존 방식 */
-    void *newptr = mm_malloc(size);
+    newptr = mm_malloc(size);
 
     if (newptr == NULL)
         return NULL;
 
-    size_t copySize = oldsize - DSIZE;
+    copySize = GET_SIZE(HDRP(oldptr)) - DSIZE;
 
     if (size < copySize)
         copySize = size;
-
-    memcpy(newptr, ptr, copySize);
-    mm_free(ptr);
-
+        
+    memcpy(newptr, oldptr, copySize);
+    mm_free(oldptr);
     return newptr;
 }
 
